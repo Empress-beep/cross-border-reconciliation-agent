@@ -107,7 +107,7 @@ python app.py
 2.FastGPT Agent 对话交互，对账任务完成输出结果
 
 ![Agent_chat1](docs/Agent_chat1.png)
-![Agent_chat2](docs/Agent_chat2.png)
+![Agent_chat2](docs/Agent——chat2.png)
 
 3.FastGPT OpenAPI 工具参数配置
 
