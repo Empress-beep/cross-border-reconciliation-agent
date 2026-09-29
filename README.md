@@ -102,29 +102,28 @@ python app.py
 
 1.cpolar 内网穿透 + Flask 中转接口请求日志
 
-<img src="E:\RPA简历项目\cross-border-reconciliation-agent\docs\cpolar_log.png" alt="cpolar_log" style="zoom:50%;" />
+![cpolar_log](docs/cpolar_log.png)
 
 2.FastGPT Agent 对话交互，对账任务完成输出结果
 
-<img src="E:\RPA简历项目\cross-border-reconciliation-agent\docs\Agent_chat1.png" style="zoom:50%;" />
-
-<img src="E:\RPA简历项目\cross-border-reconciliation-agent\docs\Agent——chat2.png" alt="Agent——chat2" style="zoom:50%;" />
+![Agent_chat1](docs/Agent_chat1.png)
+![Agent_chat2](docs/Agent_chat2.png)
 
 3.FastGPT OpenAPI 工具参数配置
 
-<img src="E:\RPA简历项目\cross-border-reconciliation-agent\docs\fastgpt_openapi_setting.png" alt="fastgpt_openapi_setting" style="zoom:50%;" />
+![fastgpt_openapi_setting](docs/fastgpt_openapi_setting.png)
 
 4.FastGPT RAG 对账业务规则知识库
 
-<img src="E:\RPA简历项目\cross-border-reconciliation-agent\docs\fastgpt_rag_kb.png" alt="fastgpt_rag_kb" style="zoom:50%;" />
+![fastgpt_rag_kb](docs/fastgpt_rag_kb.png)
 
 5.影刀 RPA 流程触发器运行日志
 
-<img src="E:\RPA简历项目\cross-border-reconciliation-agent\docs\yingdao_run_log.png" alt="yingdao_run_log" style="zoom:50%;" />
+![yingdao_run_log](docs/yingdao_run_log.png)
 
 6.对账差异 Excel 输出产物
 
-<img src="E:\RPA简历项目\cross-border-reconciliation-agent\docs\reconciliation_excel_result.png" alt="reconciliation_excel_result" style="zoom:50%;" />
+![reconciliation_excel_result](docs/reconciliation_excel_result.png)
 
 ## 📌 已知限制与注意事项
 
