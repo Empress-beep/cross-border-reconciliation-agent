@@ -1,0 +1,44 @@
+# 环境密钥文件
+.env
+*.key
+
+# Python缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 程序运行产出：任务、日志、输出报表
+*.log
+task_queue/*
+output/*
+log/*
+global_task_in/*.json
+task/*.json
+output/*.xlsx
+archive/
+__pycache__/
+*.pyc
+
+# cpolar配置
+cpolar*.yml
+
+# IDE配置
+.vscode/
+.idea/
+
+# 大数据文件，只允许sample_data下样例
+*.xlsx
+*.csv
+!sample_data/*.xlsx
+!sample_data/*.csv
+
+# windows系统文件
+Thumbs.db
+.DS_Store
+
+# 影刀相关编译缓存
+*.pybx
+*.sigstore
+.dev/
+
