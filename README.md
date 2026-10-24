@@ -1,140 +1,182 @@
-# 跨境多平台订单&结算对账自动化系统
+﻿# 跨境多平台订单&结算对账自动化系统
 
-> FastGPT‑Agent + Flask中转 + 影刀RPA 实现跨境电商智能对账闭环Demo项目
+> Flask Web + 规则引擎 + 千问归因 + FastGPT Agent 问答，开箱即用的跨境电商对账工具
 
 ## 📖 项目简介
-针对跨境电商Temu、亚马逊平台订单与结算账单人工对账效率低、差异核对繁琐问题，搭建一套**大模型Agent驱动的自动化对账系统**。
-通过FastGPT构建RAG知识库，导入对账业务规则文档；Agent接收用户对账指令，调用Flask接口生成任务中转文件；影刀RPA监听中转目录，读取订单、结算CSV数据执行对账逻辑，输出对账差异Excel；执行完成回写任务状态，Agent读取执行结果并反馈给用户，完成端到端全流程自动化。
+针对跨境电商 Temu、亚马逊平台订单与结算账单人工对账效率低、差异核对繁琐问题，提供一套**打开网页就能用的自动化对账工具**。
+上传 5 份后台导出 CSV，系统按文件名自动识别类型，经对账引擎完成「订单 ↔ 平台结算 ↔ 银行回款」双层规则核对，一键产出带时间戳的差异 Excel；可选启用千问 AI 逐条归因备注，可在结果页与 Agent 对话追问差异原因——规则解释基于 RAG 知识库，本批数据经脱敏后注入对话上下文。
 
-本项目为本地演示Demo，完整链路可本机复现运行。
+本项目为个人技术探索性质的开源成果。仓库内数据均为模拟样例，未涉及任何企业真实生产数据。项目设计为单机本地运行方案，旨在展示RAG与自动化规则在复杂业务场景下的技术可行性，无需依赖企业级服务器环境即可完整复现。
 
 ## 🛠 技术栈
-- **大模型Agent&RAG**：FastGPT、提示词工程、向量知识库检索
-- **后端中转服务**：Python Flask，实现Agent与RPA之间任务通信
-- **RPA自动化**：影刀RPA（社区免费版），可视化流程 + Python混合开发
-- **数据处理**：Pandas，订单/结算账单读取、清洗、比对、差异输出
-- **内网穿透**：Cpolar，用于本地Flask服务被云端FastGPT访问
-- **数据源**：Temu、亚马逊模拟订单明细、结算账单CSV模拟业务数据
+- **Web 后端**：Python Flask（上传、任务队列、结果页、下载），waitress 生产级部署
+- **规则引擎**：Pandas + OpenPyXL，订单/结算字段标准化、双层对账核比、差异 Excel 输出
+- **AI 差异归因（可选）**：阿里云百炼千问（dashscope SDK），脱敏后逐条生成业务备注，带熔断保护
+- **Agent 问答（可选）**：FastGPT + RAG 知识库，OpenAPI 服务端代理，注入本批脱敏差异上下文
+- **质量保障**：pytest 回归测试（golden 断言、异常输入、降级链、脱敏拦截）
+- **数据源**：Temu、亚马逊模拟订单明细、结算账单、收款流水 CSV
 
 ## 📁 项目目录结构
 
 跨境多平台订单 & 结算对账自动化系统
 
-├─core/                # 影刀 RPA 配套 Python 业务模块
+├─app.py                  # Flask Web 入口（上传 / 任务队列 / 结果页 / 下载 / 聊天代理）
 
-│   ├─config.py          # 路径、日志、千问 API 配置
+├─启动_本机.bat            # 双击启动本机模式（python app.py）
 
-│   └─cross_check.py     # 订单‑结算对账核心比对逻辑
+├─启动_局域网.bat           # 双击启动局域网模式（waitress 0.0.0.0:8765）
 
-├─flask_api/             # Flask 中转服务
+├─engine/                 # 对账引擎（独立包，命令行可单独运行）
 
-│   └─app.py             # 接收 Agent 下发任务、查询任务状态接口
+│   ├─reconcile.py        #   7 步主流程与结果导出
 
-├─rag_knowledge/         # RAG 知识库文档
+│   ├─normalize.py        #   亚马逊/Temu 字段标准化
 
-│   └─对账规则文档.md    # 字段映射、校验逻辑、业务规则
+│   ├─checks.py           #   双层对账判定规则
 
-├─demo_data/             # 模拟业务测试 csv 数据
+│   ├─attribution.py      #   千问归因 + 失败熔断
 
-├─docs/                  # 项目截图、演示文档
+│   ├─desensitize.py      #   脱敏（单号掩码 / 金额区间化）
+
+│   └─config.py           #   .env 配置读取与体检
+
+├─web/                    # 网页界面（templates + static）
+
+├─tests/                  # pytest 回归测试（29 个用例）
+
+├─rpa_shadowbot/          # 影刀 RPA 无人值守备选模式（定时/监听文件夹）
+
+├─docs/                   # 部署手册 · 运维排障 · 数据安全说明
+
+├─后台数据/                # 模拟业务测试 csv 数据（5 份）
+
+├─RAG知识库/               # 对账规则知识源文档（可导入 FastGPT）
+
+├─.env.example            # 配置模板
+
+├─requirements.txt        # 运行依赖
 
 └─README.md
 
 > ⚠️ 重要说明
-> 1. 影刀RPA**社区免费版不支持导出独立工程文件(.xprj/.flow)**，可视化拖拽流程源码无法导出分发。仓库仅归档配套Python业务脚本，可视化流程需要在本机影刀客户端打开项目查看与运行。
-> 2. 代码内Windows绝对路径为本机演示路径，部署前务必修改为自己电脑实际路径。
-> 3. 千问API‑Key不硬编码写在源码，从系统环境变量读取，不要将明文密钥提交至仓库。
+> 1. API 密钥通过 `.env` 配置（模板 `.env.example`），**不要将明文密钥提交至仓库**；不配置任何密钥时 AI 功能自动隐藏，对账与下载完全可用。
+> 2. `data/` 为运行时生成目录（任务数据与日志），已在 `.gitignore` 过滤，不要提交到版本库。
+> 3. 代码内样例路径为 Windows 格式，Linux/macOS 使用命令行方式启动并按需调整路径。
 
 ## 🔄 整体业务流程
-1. 用户在FastGPT Agent对话窗口下发对账指令；
-2. Agent检索RAG对账规则知识库，组装任务参数，调用Flask `submit_task`接口；
-3. Flask接收请求，生成`task_xxx.json`任务中转文件，写入全局中转目录；
-4. 影刀RPA监听中转文件夹，读取任务文件，获取业务数据存放路径；
-5. RPA调用对账Python模块，读取订单、结算CSV执行交叉对账，输出差异Excel；
-6. 无论成功/失败，影刀写入`task_xxx_result.json`任务结果状态文件；
-7. Agent轮询调用Flask `get_task_result`查询接口，读取任务执行状态；
-8. Agent整理对账结果、差异文件路径反馈给前端用户，整套闭环完成。
+1. 用户打开网页，拖拽上传 5 份后台导出 CSV（或点「一键填充示例数据」），可勾选「启用AI差异分析」；
+2. 服务按文件名关键字识别文件类型，落盘至 `data/tasks/{task_id}/raw/`，写入任务状态并进入队列；
+3. 后台 worker 串行执行引擎：读取原始报表 → 订单字段标准化 → 结算字段标准化；
+4. 第一层对账：订单 ↔ 平台结算 按关联键合并核比，筛出已下单未结算、金额差异、退款异常等；
+5. 第二层对账：结算 ↔ 银行回款 按批次汇总核比，筛出已结算未回款、部分到账、回款差异等；
+6. （勾选 AI 时）差异行脱敏后逐条调用千问生成 ≤30 字业务备注，连续失败自动熔断降级；
+7. 导出 `对账差异_时间戳.xlsx`（双 sheet）与任务摘要，结果页轮询展示统计卡片、差异构成与明细表；
+8. （可选）在结果页聊天框追问——服务端注入本批脱敏差异摘要，转发 FastGPT 基于知识库作答。
 
 ## ✨ 项目亮点
-1. **Agent与RPA解耦架构**：通过文件中转模式实现大模型Agent与本地RPA流程通信，规避云端Agent直接读写本地文件的限制；
-2. **RAG知识库驱动业务规则**：对账规则全部维护在知识库文档，业务变更只修改文档，无需改动代码；
-3. **完整异步任务闭环**：任务成功、失败均回写状态，Agent可以感知RPA执行结果，不是单向简单下发任务；
-4. **混合开发模式**：复杂数据比对使用Python Pandas实现，流程调度、文件监听使用影刀可视化组件，兼顾开发效率与可读性；
-5. **容错与熔断机制**：路径判空、日志持久化、AI接口失败熔断器，防止连续调用异常；区分订单未结算、退款、金额差异、回款差异多种业务场景。
+1. **引擎与 Web 解耦**：`engine/` 不依赖 Flask，网页、命令行、定时任务三种方式共用同一套对账逻辑，可独立测试与复用；
+2. **规则引擎 100% 判定**：差异判定全部由确定性规则完成，可复现、可审计，golden 测试锁定样例数据固定产出 9 处差异；
+3. **AI 全链路可降级**：无 Key、断网、连续失败熔断——归因与聊天优雅退化，对账与下载永远不受影响；
+4. **出网内容强制脱敏**：订单号掩码、金额区间化，测试断言拦截未脱敏 payload，真实业务数据不出内网；
+5. **工程化韧性**：任务状态机 + 单线程队列、三层异常捕获（路由/错误页/worker 顶层）、15 分钟看门狗、重启自动恢复、应用/任务双日志体系。
 
 ## 🚀 本地运行前置条件
-1. Python3.10+，安装依赖
+1. Python 3.10+，安装依赖
 ```bash
-pip install flask pandas openpyxl dashscope
-
-
+pip install -r requirements.txt
 ```
 
-2.本地安装影刀 RPA 客户端，导入对应应用
+2.（可选）配置 AI 能力——不配置则对应功能自动隐藏
+```cmd
+copy .env.example .env
+:: 编辑 .env：DASHSCOPE_API_KEY=千问Key            ← AI 差异归因
+::           FASTGPT_BASE_URL / API_KEY / APP_ID   ← 结果页 Agent 问答
+```
 
-3.Cpolar 内网穿透工具，映射 Flask 8765 端口，提供 HTTPS 公网地址，用于 FastGPT 插件调用本地接口
+3.（可选，Agent 问答需要）FastGPT 平台创建对话应用并发布获取密钥与应用 ID，导入 `RAG知识库/跨境对账规则文档.md` 至知识库
 
-4.FastGPT 平台：创建 Agent，导入对账规则知识库，配置 OpenAPI 插件（submit_task、get_task_result两个接口）
-
-5.设置环境变量 DASHSCOPE_API_KEY，填入阿里云千问 API‑Key
+4. 浏览器：Chrome / Edge 等现代浏览器访问本机页面
 
 ## 📝 启动步骤
 
-1. 修改 `flask_api/app.py`、`rpa_py/config.py` 中本地目录配置，路径与影刀读取路径保持一致；
-2. 启动 Flask 服务
+1. 安装依赖并完成（可选的）`.env` 配置；
 
+2. 启动服务（二选一）：
 ```cmd
-cd flask_api
+:: 本机模式
 python app.py
+:: 或双击 启动_本机.bat
+
+:: 局域网共享模式（同事访问 http://本机IP:8765，首次需防火墙放行 8765）
+waitress-serve --host=0.0.0.0 --port=8765 app:app
+:: 或双击 启动_局域网.bat
 ```
 
-3.启动 Cpolar 内网穿透，映射 8765 端口，获取公网 HTTPS 地址；
+3. 浏览器打开 `http://127.0.0.1:8765`；
 
-4.将 Cpolar 公网地址填入 FastGPT OpenAPI 插件配置；
+4. 点「一键填充示例数据」（或自行上传 5 份 CSV），按需勾选 AI，点击「开始对账」；
 
-5.启动影刀 RPA 应用，开启文件夹文件触发器监听；
+5. 结果页查看差异摘要与明细，下载 `对账差异_时间戳.xlsx`；可选在聊天框追问差异原因；
 
-6.在 FastGPT 对话窗口下发对账任务，观察整套链路执行；
+6.（可选，不走网页的兜底方式）命令行直接执行引擎：
+```bash
+python -m engine --raw 后台数据 --output output --ai 0
+```
 
-7.执行完毕查看 output 目录对账差异 Excel 文件。
+7.（开发验证）运行回归测试：
+```bash
+pytest tests -q
+```
 
-## 📸项目演示截图
+8. 深度部署（换机/服务器部署、端口占用排查、防火墙配置、部署后验证清单）见 [docs/部署手册.md](docs/部署手册.md)；故障现象速查见 [docs/运维排障.md](docs/运维排障.md)；数据流向与出网清单见 [docs/数据安全说明.md](docs/数据安全说明.md)。
 
-1.cpolar 内网穿透 + Flask 中转接口请求日志
+## 📸 项目演示截图
 
-![cpolar_log](docs/cpolar_log.png)
+> <!-- 1.Web界面启动截图 -->
+>
+> ![Web界面启动](./docs/images/web-interface-1.png)
+>
+> <!-- 2.文件上传，开启AI差异分析截图 -->
+>
+> ![文件上传](./docs/images/web-interface-2.png)
+>
+> <!-- 3.执行对账截图 -->
+>
+> ![执行对账](./docs/images/web-interface-3.png)
+>
+> <!-- 4.对账结果截图 -->
+>
+> ![对账结果](./docs/images/web-interface-4.png)
+>
+> <!-- 5.Agent对话截图 -->
+>
+> ![Agent对话](./docs/images/web-interface-5.png)
+>
+> <!-- 6.FastGPT Agent 配置截图 -->
+>
+> ![FastGPT Agent](./docs/images/FastGPT-agent.png)
+>
+> <!-- 7.FastGPT RAG 知识库截图 -->
+>
+> ![FastGPT RAG](./docs/images/FastGPT-RAG.png)
+>
+> <!-- 8.运行日志截图 -->
+>
+> ![控制台运行日志](./docs/images/run-consolog.png)
 
-2.FastGPT Agent 对话交互，对账任务完成输出结果
 
-![Agent_chat1](docs/Agent_chat1.png)
-![Agent_chat2](docs/Agent——chat2.png)
-
-3.FastGPT OpenAPI 工具参数配置
-
-![fastgpt_openapi_setting](docs/fastgpt_openapi_setting.png)
-
-4.FastGPT RAG 对账业务规则知识库
-
-![fastgpt_rag_kb](docs/fastgpt_rag_kb.png)
-
-5.影刀 RPA 流程触发器运行日志
-
-![yingdao_run_log](docs/yingdao_run_log.png)
-
-6.对账差异 Excel 输出产物
-
-![reconciliation_excel_result](docs/reconciliation_excel_result.png)
 
 ## 📌 已知限制与注意事项
 
-1. 影刀社区免费版限制，无法导出可视化流程工程，仅本机客户端可完整复现；
-2. Cpolar 免费版隧道域名每次重启会变化，修改后需要同步更新 FastGPT 插件配置；
-3. 本项目为 Demo 演示项目，未做高并发处理，适合单任务调试演示；
-4. 代码路径默认为 Windows 格式，Linux/macOS 需要修改路径分隔符；
-5. log、task、output、archive 目录为运行时生成，不要提交到版本库，已在 gitignore 过滤。
+1. **项目性质与输出效力**：本项目为个人技术探索性质的开源成果（非企业产品，未对接企业真实环境，未经生产环境验证）；对账结论与 AI 输出仅供参考，**不可直接用于实际财务决策**；
+2. 本项目定位单机/局域网工具，未做登录鉴权与高并发处理，任务为单线程队列串行执行；
+3. AI 为可选增强且依赖第三方：千问受账号额度限制（失败自动降级），FastGPT Agent 回答耗时受上游影响（约 10~90 秒属正常，服务端 180 秒超时兜底）；
+4. 代码路径与启动脚本默认 Windows 格式，Linux/macOS 使用 `python app.py` / `waitress-serve` 命令行启动；
+5. `.env`（密钥）与 `data/`（运行时数据）不会入库，已在 `.gitignore` 过滤；
+6. 聊天上下文与归因请求均为脱敏内容（单号掩码、金额区间化），Excel 与原始 CSV 永不出网。
 
-## 📃项目输出产物
+## 📃 项目输出产物
 
-- 对账差异 Excel：`订单结算差异`、`结算回款差异`两个 sheet，记录不匹配异常数据
-- 运行日志：Flask 服务日志 + RPA 业务运行日志
-- task/*.json：任务、结果中转状态文件
+- 对账差异 Excel：`对账差异_YYYYMMDD_HHMMSS.xlsx`，含 `订单结算差异`、`结算回款差异` 两个 sheet（勾选 AI 时带 `AI业务备注` 列），文件名带时间戳不覆盖；
+- 任务元数据：`data/tasks/{task_id}/meta.json`，记录状态、统计、差异构成；
+- 运行日志：应用日志 `data/logs/app.log`（滚动切割）+ 任务日志 `data/tasks/{task_id}/run.log`（7 步全流程）。
