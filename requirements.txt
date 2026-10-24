@@ -1,0 +1,10 @@
+# 跨境对账系统 v2.0 运行依赖
+flask
+pandas
+openpyxl
+requests
+waitress
+python-dotenv
+dashscope
+# 测试
+pytest
