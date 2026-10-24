@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}新建对账 - 跨境对账系统{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>发起对账</h2>
+  <p class="hint">选择或拖入 5 类 CSV，系统按文件名自动识别类型：亚马逊订单 / 亚马逊结算 / Temu订单 / Temu结算 / 收款流水。</p>
+
+  <div class="dropzone" id="dropzone">
+    <input type="file" id="file-input" multiple accept=".csv" hidden>
+    <div class="dz-icon">⬆</div>
+    <div class="dz-text"><strong>点击选择文件</strong>，或将 CSV 文件拖拽到此处</div>
+    <div class="hint">支持多选 · 单文件 ≤ 5MB · 仅 .csv</div>
+  </div>
+
+  <div id="file-panel" hidden>
+    <div class="file-head">
+      <span>已选文件（<b id="file-count">0</b> / 5）</span>
+      <button type="button" class="btn btn-sm" id="btn-clear">清空列表</button>
+    </div>
+    <table class="table file-table" id="file-table"></table>
+    <div id="file-warn" class="warn-box" hidden></div>
+  </div>
+
+  <div class="form-row switch-row">
+    <label class="switch-label">
+      <input type="checkbox" id="ai-switch">
+      <span class="switch"></span>
+      启用AI差异分析（脱敏后调用大模型归因）
+    </label>
+  </div>
+
+  <div class="form-row">
+    <button type="button" class="btn btn-primary" id="btn-start" disabled>开始对账</button>
+    <button type="button" class="btn" id="btn-sample">一键填充示例数据</button>
+  </div>
+  <div id="upload-error" class="error-box" hidden></div>
+</section>
+
+<section class="card">
+  <h2>历史任务</h2>
+  {% if tasks %}
+  <table class="table">
+    <thead>
+      <tr><th>任务ID</th><th>创建时间</th><th>状态</th><th>差异数</th><th>备注</th></tr>
+    </thead>
+    <tbody>
+      {% for t in tasks %}
+      <tr>
+        <td><a href="/result/{{ t.task_id }}" class="mono">{{ t.task_id }}</a></td>
+        <td>{{ t.created_at or "-" }}</td>
+        <td><span class="badge badge-{{ t.status or 'unknown' }}">{{ {"pending":"排队中","running":"执行中","success":"成功","failed":"失败"}.get(t.status, t.status or "未知") }}</span></td>
+        <td>{{ t.diff_count if t.diff_count is not none else "-" }}</td>
+        <td class="ellipsis">{{ t.error or "" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="hint">暂无历史任务。可点击「一键填充示例数据」快速体验完整流程。</p>
+  {% endif %}
+</section>
+
+<script>
+(function () {
+  var CANONICALS = [
+    "亚马逊订单明细.csv", "亚马逊结算账单.csv",
+    "Temu订单明细.csv", "Temu结算账单.csv", "收款流水报表.csv"
+  ];
+  var selected = [];
+  var dropzone = document.getElementById("dropzone");
+  var fileInput = document.getElementById("file-input");
+  var filePanel = document.getElementById("file-panel");
+  var fileTable = document.getElementById("file-table");
+  var fileWarn = document.getElementById("file-warn");
+  var fileCount = document.getElementById("file-count");
+  var aiSwitch = document.getElementById("ai-switch");
+  var errBox = document.getElementById("upload-error");
+  var btnStart = document.getElementById("btn-start");
+  var btnSample = document.getElementById("btn-sample");
+  var btnClear = document.getElementById("btn-clear");
+
+  function classify(name) {
+    var lower = name.toLowerCase();
+    if (name.indexOf("亚马逊") >= 0 && name.indexOf("订单") >= 0) return CANONICALS[0];
+    if (name.indexOf("亚马逊") >= 0 && name.indexOf("结算") >= 0) return CANONICALS[1];
+    if (lower.indexOf("temu") >= 0 && name.indexOf("订单") >= 0) return CANONICALS[2];
+    if (lower.indexOf("temu") >= 0 && name.indexOf("结算") >= 0) return CANONICALS[3];
+    if (name.indexOf("收款") >= 0 || name.indexOf("流水") >= 0) return CANONICALS[4];
+    return null;
+  }
+  function humanSize(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+    return (n / 1048576).toFixed(2) + " MB";
+  }
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = String(s);
+    return d.innerHTML;
+  }
+
+  function addFiles(fileList) {
+    for (var i = 0; i < fileList.length; i++) {
+      var f = fileList[i];
+      var exists = selected.some(function (s) {
+        return s.name === f.name && s.size === f.size;
+      });
+      if (!exists) { selected.push(f); }
+    }
+    render();
+  }
+
+  function render() {
+    filePanel.hidden = selected.length === 0;
+    fileCount.textContent = selected.length;
+    var canonCount = {};
+    selected.forEach(function (f) {
+      var c = classify(f.name);
+      if (c) { canonCount[c] = (canonCount[c] || 0) + 1; }
+    });
+    var html = "<thead><tr><th>#</th><th>文件名</th><th>大小</th><th>识别结果</th><th>状态</th><th></th></tr></thead><tbody>";
+    selected.forEach(function (f, idx) {
+      var c = classify(f.name);
+      var status, chip;
+      if (!c) { status = "未识别"; chip = '<span class="chip chip-red">未识别</span>'; }
+      else if (canonCount[c] > 1) { status = "重复"; chip = '<span class="chip chip-red">重复</span>'; }
+      else { status = "就绪"; chip = '<span class="chip chip-green">✓ 就绪</span>'; }
+      html += "<tr>" +
+        "<td>" + (idx + 1) + "</td>" +
+        '<td class="ellipsis-max">' + esc(f.name) + "</td>" +
+        "<td>" + humanSize(f.size) + "</td>" +
+        "<td>" + (c ? esc(c) : '<span class="text-red">无法识别（需含平台+类型关键字）</span>') + "</td>" +
+        "<td>" + chip + "</td>" +
+        '<td><button type="button" class="btn-remove" data-idx="' + idx + '" title="移除">×</button></td>' +
+        "</tr>";
+    });
+    fileTable.innerHTML = html + "</tbody>";
+
+    var missing = CANONICALS.filter(function (c) { return !canonCount[c]; });
+    var dups = CANONICALS.filter(function (c) { return canonCount[c] > 1; });
+    var unknown = selected.filter(function (f) { return !classify(f.name); });
+    var warns = [];
+    if (missing.length) { warns.push("还缺 " + missing.length + " 类：" + missing.join("、")); }
+    if (dups.length) { warns.push("重复上传：" + dups.join("、")); }
+    if (unknown.length) { warns.push("有 " + unknown.length + " 个文件无法识别，请检查文件名"); }
+    if (warns.length) {
+      fileWarn.innerHTML = warns.map(esc).join("<br>");
+      fileWarn.hidden = false;
+    } else {
+      fileWarn.innerHTML = '<span class="text-green">✓ 5 类文件齐全且无重复，可以开始对账</span>';
+      fileWarn.hidden = false;
+    }
+    btnStart.disabled = warns.length > 0;
+  }
+
+  fileTable.addEventListener("click", function (ev) {
+    var btn = ev.target.closest(".btn-remove");
+    if (!btn) { return; }
+    selected.splice(parseInt(btn.getAttribute("data-idx"), 10), 1);
+    render();
+  });
+
+  dropzone.addEventListener("click", function () { fileInput.click(); });
+  fileInput.addEventListener("change", function () {
+    addFiles(fileInput.files);
+    fileInput.value = "";
+  });
+  ["dragenter", "dragover"].forEach(function (evt) {
+    dropzone.addEventListener(evt, function (ev) {
+      ev.preventDefault();
+      dropzone.classList.add("dz-over");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (evt) {
+    dropzone.addEventListener(evt, function (ev) {
+      ev.preventDefault();
+      dropzone.classList.remove("dz-over");
+    });
+  });
+  dropzone.addEventListener("drop", function (ev) {
+    if (ev.dataTransfer && ev.dataTransfer.files) { addFiles(ev.dataTransfer.files); }
+  });
+  btnClear.addEventListener("click", function () {
+    selected = [];
+    render();
+  });
+
+  function showError(msg) {
+    errBox.textContent = msg;
+    errBox.hidden = false;
+  }
+  function gotoResult(taskId) {
+    window.location.href = "/result/" + taskId;
+  }
+  function postForm(url, fd) {
+    return fetch(url, { method: "POST", body: fd }).then(function (resp) {
+      return resp.json().then(function (data) {
+        if (!resp.ok) { throw new Error(data.error || ("请求失败（" + resp.status + "）")); }
+        return data;
+      });
+    });
+  }
+
+  btnStart.addEventListener("click", function () {
+    errBox.hidden = true;
+    var fd = new FormData();
+    selected.forEach(function (f) { fd.append("files", f); });
+    fd.append("ai", aiSwitch.checked ? "1" : "0");
+    btnStart.disabled = true;
+    btnStart.textContent = "上传中…";
+    postForm("/api/tasks", fd).then(function (data) {
+      gotoResult(data.task_id);
+    }).catch(function (e) {
+      showError(e.message);
+      render();
+      btnStart.textContent = "开始对账";
+    });
+  });
+
+  btnSample.addEventListener("click", function () {
+    errBox.hidden = true;
+    btnSample.disabled = true;
+    btnSample.textContent = "创建中…";
+    var fd = new FormData();
+    fd.append("ai", aiSwitch.checked ? "1" : "0");
+    postForm("/api/tasks/sample", fd).then(function (data) {
+      gotoResult(data.task_id);
+    }).catch(function (e) {
+      showError(e.message);
+      btnSample.disabled = false;
+      btnSample.textContent = "一键填充示例数据";
+    });
+  });
+})();
+</script>
+{% endblock %}

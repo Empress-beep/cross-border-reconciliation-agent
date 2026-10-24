@@ -1,0 +1,270 @@
+/* 跨境对账系统 v2.0 · 样式 */
+* { box-sizing: border-box; }
+/* hidden 属性必须压过任何 display 声明 */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+  background: linear-gradient(180deg, #eef2f7 0%, #f4f6f9 220px);
+  color: #2c3e50;
+  font-size: 14px;
+}
+a { color: #2563eb; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---------- 顶栏 ---------- */
+.topbar {
+  background: linear-gradient(90deg, #16283f 0%, #1e3a5f 55%, #274b77 100%);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(16, 42, 67, 0.25);
+}
+.topbar-inner {
+  max-width: 1100px; margin: 0 auto; padding: 16px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.brand { color: #fff; font-size: 19px; font-weight: 700; letter-spacing: 0.3px; }
+.brand:hover { text-decoration: none; }
+.brand .dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: #34d399; margin-right: 8px; vertical-align: 2px;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.25);
+}
+.brand .ver {
+  font-size: 11px; color: #a8c0d8; font-weight: 400;
+  background: rgba(255, 255, 255, 0.1); border-radius: 10px;
+  padding: 2px 8px; margin-left: 8px; vertical-align: 2px;
+}
+.topbar nav a { color: #cfd8e3; margin-left: 18px; font-weight: 500; }
+.topbar nav a:hover { color: #fff; }
+
+.container { max-width: 1100px; margin: 26px auto; padding: 0 20px; }
+.footer { text-align: center; color: #8a97a8; font-size: 12px; padding: 26px 0 34px; }
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: #fff; border-radius: 14px; padding: 24px 28px;
+  margin-bottom: 22px;
+  box-shadow: 0 4px 16px rgba(16, 42, 67, 0.07);
+  border: 1px solid #e9eef5;
+}
+.card h2 {
+  margin: 0 0 10px; font-size: 18px; display: flex; align-items: center; gap: 10px;
+}
+.card h2::before {
+  content: ""; width: 4px; height: 18px; border-radius: 2px;
+  background: linear-gradient(180deg, #2563eb, #60a5fa);
+}
+.card h3 {
+  margin: 22px 0 10px; font-size: 15px; color: #1f2d3d;
+  padding-left: 10px; border-left: 3px solid #2563eb;
+}
+.hint { color: #6b7a8d; font-size: 13px; margin: 4px 0 14px; }
+.mono { font-family: Consolas, "Courier New", monospace; font-size: 13px; color: #5c6b7a; }
+.text-red { color: #b42318; }
+.text-green { color: #15803d; }
+
+.form-row { margin: 14px 0; }
+.checkbox-label { font-size: 14px; cursor: pointer; user-select: none; }
+
+/* ---------- 按钮 ---------- */
+.btn {
+  display: inline-block; padding: 9px 20px; border: 1px solid #d3dce8;
+  border-radius: 8px; background: #fff; color: #2c3e50; font-size: 14px;
+  cursor: pointer; margin-right: 10px; transition: all 0.15s ease;
+}
+.btn:hover { background: #f2f6fb; border-color: #b9c9dc; text-decoration: none; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:disabled:hover { background: #fff; }
+.btn-primary {
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+  border-color: #2563eb; color: #fff; font-weight: 600;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+.btn-primary:hover { background: linear-gradient(180deg, #2f76ee, #1d4fd7); }
+.btn-sm { padding: 4px 12px; font-size: 12px; }
+
+/* ---------- 提示框 ---------- */
+.error-box {
+  background: #fdf0f0; border: 1px solid #f5c2c2; color: #b42318;
+  border-radius: 8px; padding: 11px 14px; font-size: 14px; margin: 12px 0;
+}
+.warn-box {
+  background: #fff8e8; border: 1px solid #f2dfa8; color: #92600a;
+  border-radius: 8px; padding: 10px 14px; font-size: 13px; margin: 10px 0;
+  line-height: 1.7;
+}
+
+/* ---------- 拖拽上传区 ---------- */
+.dropzone {
+  border: 2px dashed #c5d4e8; border-radius: 12px;
+  padding: 30px 20px; text-align: center; cursor: pointer;
+  background: #fafcff; transition: all 0.15s ease;
+}
+.dropzone:hover { border-color: #7ea6e8; background: #f3f8ff; }
+.dropzone.dz-over {
+  border-color: #2563eb; background: #e8f0fe;
+  box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+.dz-icon {
+  width: 46px; height: 46px; margin: 0 auto 10px; border-radius: 50%;
+  background: #e8f0fe; color: #2563eb; font-size: 22px; line-height: 46px;
+  font-weight: 700;
+}
+.dz-text { font-size: 15px; margin-bottom: 4px; }
+
+/* ---------- 已选文件列表 ---------- */
+.file-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin: 18px 0 6px; font-weight: 600;
+}
+.file-table td { vertical-align: middle; }
+.ellipsis-max { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip {
+  display: inline-block; padding: 2px 10px; border-radius: 10px;
+  font-size: 12px; white-space: nowrap;
+}
+.chip-green { background: #e6f6ec; color: #15803d; }
+.chip-red { background: #fdf0f0; color: #b42318; }
+.btn-remove {
+  border: none; background: #f1f4f8; color: #8a97a8; width: 24px; height: 24px;
+  border-radius: 6px; cursor: pointer; font-size: 14px; line-height: 1;
+}
+.btn-remove:hover { background: #fddfdd; color: #b42318; }
+
+/* ---------- 开关 ---------- */
+.switch-row { margin-top: 18px; }
+.switch-label {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 14px; cursor: pointer; user-select: none;
+}
+.switch-label input { display: none; }
+.switch {
+  width: 40px; height: 22px; border-radius: 11px; background: #cbd5e1;
+  position: relative; transition: background 0.15s ease; flex: none;
+}
+.switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 18px; height: 18px; border-radius: 50%; background: #fff;
+  transition: left 0.15s ease; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.switch-label input:checked + .switch { background: #2563eb; }
+.switch-label input:checked + .switch::after { left: 20px; }
+
+/* ---------- 表格 ---------- */
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th, .table td {
+  border-bottom: 1px solid #e8edf3; padding: 9px 10px;
+  text-align: left; vertical-align: top;
+}
+.table th {
+  background: #f4f7fb; font-weight: 600; white-space: nowrap;
+  color: #3d4f63;
+}
+.table tbody tr:hover { background: #fafcff; }
+.table-wrap { overflow-x: auto; border: 1px solid #e8edf3; border-radius: 10px; }
+.table-wrap .table th:first-child, .table-wrap .table td:first-child { padding-left: 14px; }
+.ellipsis { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 状态徽章 ---------- */
+.badge {
+  display: inline-block; padding: 3px 12px; border-radius: 12px;
+  font-size: 12px; white-space: nowrap; font-weight: 500;
+}
+.badge-pending { background: #eef1f5; color: #5c6b7a; }
+.badge-running { background: #e8f0fe; color: #1d4fd7; }
+.badge-success { background: #e6f6ec; color: #15803d; }
+.badge-failed { background: #fdf0f0; color: #b42318; }
+.badge-unknown { background: #eef1f5; color: #8a97a8; }
+
+/* ---------- 结果页 ---------- */
+.result-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.result-head h2 { margin: 0; }
+
+.progress-box {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 18px 0 6px; color: #5c6b7a;
+}
+.spinner {
+  width: 24px; height: 24px; border: 3px solid #d7e0ea;
+  border-top-color: #2563eb; border-radius: 50%;
+  animation: spin 0.9s linear infinite; flex: none; margin-top: 2px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-body { flex: 1; }
+
+/* 七步流水线 */
+.steps {
+  list-style: none; display: flex; flex-wrap: wrap; gap: 8px;
+  margin: 14px 0 6px; padding: 0;
+}
+.step {
+  display: flex; align-items: center; gap: 7px;
+  background: #f4f7fb; border: 1px solid #e3eaf3; color: #8a97a8;
+  border-radius: 16px; padding: 5px 12px 5px 6px; font-size: 12px;
+}
+.step-no {
+  width: 18px; height: 18px; border-radius: 50%; background: #dde6f1;
+  color: #6b7a8d; font-size: 11px; line-height: 18px; text-align: center;
+  font-weight: 700; flex: none;
+}
+.step.active {
+  background: #e8f0fe; border-color: #b7cffb; color: #1d4fd7; font-weight: 600;
+}
+.step.active .step-no { background: #2563eb; color: #fff; }
+.step.done { background: #ecf9f1; border-color: #bfe8cf; color: #15803d; }
+.step.done .step-no { background: #22a55b; color: #fff; }
+
+.stats-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0; }
+.stat-chip {
+  background: #fff; border: 1px solid #e8edf3; border-radius: 10px;
+  padding: 12px 22px; text-align: center; min-width: 118px;
+  border-left: 4px solid #94a3b8;
+}
+.stat-blue { border-left-color: #2563eb; }
+.stat-green { border-left-color: #22a55b; }
+.stat-teal { border-left-color: #0d9488; }
+.stat-red { border-left-color: #dc2626; }
+.stat-num { font-size: 24px; font-weight: 700; color: #1f2d3d; }
+.stat-label { font-size: 12px; color: #6b7a8d; margin-top: 3px; }
+
+.diff-summary { margin: 10px 0; padding-left: 20px; font-size: 14px; line-height: 1.9; }
+
+.log-view {
+  background: #16283f; color: #cfe0f2; border-radius: 10px;
+  padding: 16px; font-size: 12px; line-height: 1.6;
+  overflow-x: auto; max-height: 420px; overflow-y: auto;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+/* ---------- Agent 聊天面板 ---------- */
+.chat-card { margin-top: 22px; }
+.chat-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
+}
+.chat-messages {
+  background: #f7f9fc; border: 1px solid #e8edf3; border-radius: 10px;
+  height: 300px; overflow-y: auto; padding: 14px;
+}
+.chat-msg {
+  max-width: 78%; padding: 9px 14px; border-radius: 12px;
+  margin-bottom: 10px; font-size: 13.5px; line-height: 1.65;
+  white-space: pre-wrap; word-break: break-word;
+}
+.chat-bot {
+  background: #fff; border: 1px solid #e3eaf3; color: #2c3e50;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 3px rgba(16, 42, 67, 0.05);
+}
+.chat-user {
+  background: linear-gradient(180deg, #3b82f6, #2563eb); color: #fff;
+  margin-left: auto; border-bottom-right-radius: 4px;
+}
+.chat-form { display: flex; gap: 10px; margin-top: 12px; }
+.chat-form input {
+  flex: 1; padding: 10px 14px; border: 1px solid #d3dce8;
+  border-radius: 8px; font-size: 14px; outline: none;
+}
+.chat-form input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+.chat-form .btn { margin-right: 0; }

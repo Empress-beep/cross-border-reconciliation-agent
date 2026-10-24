@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}跨境多平台订单&amp;结算对账系统{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/"><span class="dot"></span>跨境多平台订单&amp;结算对账系统<span class="ver">v2.0</span></a>
+    <nav><a href="/">新建对账</a></nav>
+  </div>
+</header>
+<main class="container">
+{% block content %}{% endblock %}
+</main>
+<footer class="footer">本地运行 · 数据不出内网 · 对账引擎独立可测</footer>
+</body>
+</html>

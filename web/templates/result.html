@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}对账结果 - 跨境对账系统{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="result-head">
+    <h2>对账结果 <span class="mono">{{ task_id }}</span></h2>
+    <span id="status-badge" class="badge badge-unknown">加载中…</span>
+  </div>
+
+  <div id="panel-progress" class="progress-box">
+    <div class="spinner"></div>
+    <div class="progress-body">
+      <span id="progress-text">正在加载任务状态…</span>
+      <ol class="steps" id="steps"></ol>
+    </div>
+  </div>
+
+  <div id="panel-failed" hidden>
+    <div class="error-box">
+      <strong>对账失败</strong>
+      <div>错误：<span id="fail-error">-</span></div>
+      <div>失败步骤：<span id="fail-step">-</span></div>
+    </div>
+  </div>
+
+  <div id="panel-success" hidden>
+    <div id="ai-hint" class="hint" hidden></div>
+    <div class="stats-row" id="stats-row"></div>
+    <ul id="diff-summary" class="diff-summary"></ul>
+    <div class="form-row">
+      <a class="btn btn-primary" id="btn-download" href="#">⬇ 下载对账差异 Excel</a>
+    </div>
+    <h3>订单-结算差异</h3>
+    <div class="table-wrap"><table class="table" id="table-order"></table></div>
+    <h3>结算-回款差异</h3>
+    <div class="table-wrap"><table class="table" id="table-pay"></table></div>
+  </div>
+
+  <div id="panel-common" hidden>
+    <div class="form-row">
+      <button type="button" class="btn" id="btn-log">查看任务日志</button>
+      <a class="btn" href="/">返回首页</a>
+    </div>
+    <pre id="log-view" class="log-view" hidden></pre>
+  </div>
+
+  <!-- P4：Agent 聊天面板（FastGPT 服务端代理），未配置 FastGPT 时模板条件块整个不渲染 -->
+  {% if fastgpt_configured %}
+  <section id="panel-chat" class="card chat-card" hidden>
+    <div class="chat-head">
+      <h3 style="margin:0">Agent 问答</h3>
+      <span class="hint" style="margin:0">基于规则库与本批差异回答 · 对话上下文已脱敏出网</span>
+    </div>
+    <div id="chat-messages" class="chat-messages"></div>
+    <form id="chat-form" class="chat-form" autocomplete="off">
+      <input id="chat-input" type="text" maxlength="2000"
+             placeholder="就本批差异提问，如：金额差异一般怎么处理？" />
+      <button class="btn btn-primary" id="chat-send" type="submit">发送</button>
+    </form>
+  </section>
+  {% endif %}
+</section>
+
+<script>
+(function () {
+  var TASK_ID = {{ task_id | tojson }};
+  var API = "/api/tasks/" + TASK_ID;
+  var STEP_NAMES = [
+    "读取原始报表", "订单标准化", "结算标准化", "第一层对账：订单结算",
+    "第二层对账：结算回款", "导出差异Excel", "生成结果摘要"
+  ];
+  var ORDER_COLS = [
+    ["platform", "平台"], ["order_id", "订单号"], ["order_status", "订单状态"],
+    ["对账状态", "对账状态"], ["order_amount", "订单金额"], ["settle_amount", "结算金额"],
+    ["settlement_id", "结算单号"], ["AI业务备注", "AI业务备注"]
+  ];
+  var PAY_COLS = [
+    ["settlement_id", "结算单号"], ["platform", "平台"], ["收款渠道", "收款渠道"],
+    ["结算总额", "结算总额"], ["到账总额", "到账总额"],
+    ["对账状态", "对账状态"], ["AI业务备注", "AI业务备注"]
+  ];
+  var statusBadge = document.getElementById("status-badge");
+  var panelProgress = document.getElementById("panel-progress");
+  var panelFailed = document.getElementById("panel-failed");
+  var panelSuccess = document.getElementById("panel-success");
+  var panelCommon = document.getElementById("panel-common");
+  var progressText = document.getElementById("progress-text");
+  var finished = false;
+
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = (s === null || s === undefined || s === "") ? "-" : String(s);
+    return d.innerHTML;
+  }
+  function fmt(v) { return (v === null || v === undefined || v === "") ? "-" : esc(v); }
+
+  function renderSteps(logText, terminal) {
+    var mask = [false, false, false, false, false, false, false];
+    var active = -1;
+    (logText || "").split("\n").forEach(function (line) {
+      for (var n = 1; n <= 7; n++) {
+        if (line.indexOf("[步骤" + n + "/7") >= 0) {
+          if (line.indexOf("完成") >= 0) { mask[n - 1] = true; }
+          else if (line.indexOf("开始") >= 0) { active = n - 1; }
+        }
+      }
+    });
+    if (active >= 0 && mask[active]) { active = -1; }
+    if (terminal === "success") {
+      mask = [true, true, true, true, true, true, true];
+      active = -1;
+    }
+    var html = "";
+    for (var i = 0; i < 7; i++) {
+      var cls = mask[i] ? "done" : (active === i ? "active" : "todo");
+      var mark = mask[i] ? "✓" : String(i + 1);
+      html += '<li class="step ' + cls + '"><span class="step-no">' + mark +
+        "</span>" + esc(STEP_NAMES[i]) + "</li>";
+    }
+    document.getElementById("steps").innerHTML = html;
+    if (!terminal && active >= 0) {
+      progressText.textContent = "当前步骤（" + (active + 1) + "/7）：" + STEP_NAMES[active];
+    }
+  }
+
+  function renderStats(meta) {
+    var s = meta.stats || {};
+    var chips = [
+      ["总订单", s.total_orders, "blue"], ["已结算订单", s.settled_count, "green"],
+      ["全额到账批次", s.received_count, "teal"], ["差异合计", s.diff_count, "red"]
+    ];
+    document.getElementById("stats-row").innerHTML = chips.map(function (c) {
+      return '<div class="stat-chip stat-' + c[2] + '"><div class="stat-num">' +
+        fmt(c[1]) + '</div><div class="stat-label">' + esc(c[0]) + "</div></div>";
+    }).join("");
+  }
+
+  function renderSummary(meta) {
+    var items = meta.diff_summary || [];
+    document.getElementById("diff-summary").innerHTML =
+      (items.length ? items : ["无差异"]).map(function (t) {
+        return "<li>" + esc(t) + "</li>";
+      }).join("");
+  }
+
+  function renderTable(tableId, rows, cols) {
+    var html = "<thead><tr>" + cols.map(function (c) {
+      return "<th>" + esc(c[1]) + "</th>";
+    }).join("") + "</tr></thead><tbody>";
+    (rows || []).forEach(function (r) {
+      html += "<tr>" + cols.map(function (c) {
+        return "<td>" + fmt(r[c[0]]) + "</td>";
+      }).join("") + "</tr>";
+    });
+    if (!(rows || []).length) {
+      html += '<tr><td colspan="' + cols.length + '">无</td></tr>';
+    }
+    document.getElementById(tableId).innerHTML = html + "</tbody>";
+  }
+
+  function show(meta, logText) {
+    var st = meta.status;
+    statusBadge.className = "badge badge-" + st;
+    statusBadge.textContent = {
+      pending: "排队中", running: "执行中", success: "成功", failed: "失败"
+    }[st] || st;
+
+    if (st === "pending" || st === "running") {
+      panelProgress.hidden = false;
+      if (st === "pending") {
+        progressText.textContent = "任务排队中，等待执行…";
+      }
+      renderSteps(logText || "", null);
+      return;
+    }
+
+    // ===== 终态：停止轮询、隐藏进度、展示结果 =====
+    finished = true;
+    panelProgress.hidden = true;
+    panelCommon.hidden = false;
+
+    if (st === "failed") {
+      renderSteps(logText || "", null);
+      panelFailed.hidden = false;
+      document.getElementById("fail-error").textContent = meta.error || "未知错误";
+      document.getElementById("fail-step").textContent = meta.step || "未知步骤";
+      return;
+    }
+
+    panelSuccess.hidden = false;
+    renderStats(meta);
+    renderSummary(meta);
+    document.getElementById("btn-download").href = API + "/download";
+    renderTable("table-order", meta.order_settle_diff, ORDER_COLS);
+    renderTable("table-pay", meta.settle_pay_diff, PAY_COLS);
+    var aiHint = document.getElementById("ai-hint");
+    if (meta.ai_note) {
+      aiHint.textContent = meta.ai_note;
+      aiHint.className = "warn-box";
+      aiHint.hidden = false;
+    } else if (meta.ai_enabled === false) {
+      aiHint.textContent = "本次未启用 AI 差异分析（AI备注列为空）。";
+      aiHint.className = "hint";
+      aiHint.hidden = false;
+    }
+    var chatPanel = document.getElementById("panel-chat");
+    if (chatPanel) { chatPanel.hidden = false; }
+  }
+
+  document.getElementById("btn-log").addEventListener("click", function () {
+    var logView = document.getElementById("log-view");
+    if (!logView.hidden) { logView.hidden = true; return; }
+    fetch(API + "/log").then(function (r) { return r.json(); }).then(function (d) {
+      logView.textContent = d.log || d.error || "(无日志)";
+      logView.hidden = false;
+    });
+  });
+
+  // ===== P4：Agent 聊天面板（未配置 FastGPT 时模板不含此 DOM，整段自然失效） =====
+  var chatForm = document.getElementById("chat-form");
+  if (chatForm) {
+    var chatMessages = document.getElementById("chat-messages");
+    var chatInput = document.getElementById("chat-input");
+    var chatSend = document.getElementById("chat-send");
+
+    function addChatMsg(role, text) {
+      var div = document.createElement("div");
+      div.className = "chat-msg chat-" + role;
+      div.textContent = text;
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return div;
+    }
+    addChatMsg("bot", "你好，我是对账助手。可基于规则库和本批差异回答问题（数据已脱敏）。");
+
+    chatForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var text = chatInput.value.trim();
+      if (!text) { return; }
+      chatInput.value = "";
+      chatSend.disabled = true;
+      addChatMsg("user", text);
+      var pending = addChatMsg("bot", "思考中…");
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task_id: TASK_ID, message: text })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        pending.textContent = d.reply || d.error || "（无回复）";
+        chatSend.disabled = false;
+        chatInput.focus();
+      }).catch(function () {
+        pending.textContent = "AI服务暂不可用";
+        chatSend.disabled = false;
+      });
+    });
+  }
+
+  function poll() {
+    if (finished) { return; }
+    Promise.all([
+      fetch(API).then(function (r) {
+        if (!r.ok) { throw new Error("查询任务失败（" + r.status + "）"); }
+        return r.json();
+      }),
+      fetch(API + "/log").then(function (r) { return r.json(); })
+        .catch(function () { return { log: "" }; })
+    ]).then(function (both) {
+      var meta = both[0];
+      var logText = (both[1] || {}).log || "";
+      if (meta.status === "pending" || meta.status === "running") {
+        show(meta, logText);
+        setTimeout(poll, 2000);
+      } else {
+        show(meta, logText);
+      }
+    }).catch(function (e) {
+      progressText.textContent = e.message + "（3 秒后重试）";
+      setTimeout(poll, 3000);
+    });
+  }
+  poll();
+})();
+</script>
+{% endblock %}
