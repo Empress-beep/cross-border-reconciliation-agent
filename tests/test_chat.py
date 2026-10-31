@@ -9,6 +9,7 @@ import pytest
 import requests
 
 import app as app_mod
+import service.chat_service as cs_mod
 
 
 class FakeResp:
@@ -60,14 +61,16 @@ def success_task():
     app_mod._save_meta(tid, meta)
     yield tid
     shutil.rmtree(tdir, ignore_errors=True)
+    app_mod._delete_meta(tid)
 
 
 @pytest.fixture
 def configured(monkeypatch):
-    monkeypatch.setattr(app_mod, "FASTGPT_API_KEY", "fastgpt-test-key")
-    monkeypatch.setattr(app_mod, "FASTGPT_APP_ID", "app-test-id")
-    monkeypatch.setattr(app_mod, "FASTGPT_BASE_URL", "https://fake.fastgpt.cn")
-    monkeypatch.setattr(app_mod, "fastgpt_configured", lambda: True)
+    # 配置打靶点：service.chat_service（路由经由该模块读取配置）
+    monkeypatch.setattr(cs_mod, "FASTGPT_API_KEY", "fastgpt-test-key")
+    monkeypatch.setattr(cs_mod, "FASTGPT_APP_ID", "app-test-id")
+    monkeypatch.setattr(cs_mod, "FASTGPT_BASE_URL", "https://fake.fastgpt.cn")
+    monkeypatch.setattr(cs_mod, "fastgpt_configured", lambda: True)
 
 
 def _post_chat(client, payload):
@@ -188,9 +191,9 @@ def test_chat_history_capped(client, success_task, configured, monkeypatch):
 
 
 def test_fastgpt_url_forms(monkeypatch):
-    monkeypatch.setattr(app_mod, "FASTGPT_BASE_URL", "https://x.cn")
+    monkeypatch.setattr(cs_mod, "FASTGPT_BASE_URL", "https://x.cn")
     assert app_mod._fastgpt_chat_url() == "https://x.cn/api/v1/chat/completions"
-    monkeypatch.setattr(app_mod, "FASTGPT_BASE_URL", "https://x.cn/api/")
+    monkeypatch.setattr(cs_mod, "FASTGPT_BASE_URL", "https://x.cn/api/")
     assert app_mod._fastgpt_chat_url() == "https://x.cn/api/v1/chat/completions"
 
 

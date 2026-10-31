@@ -6,5 +6,9 @@ requests
 waitress
 python-dotenv
 dashscope
+# 任务持久化与队列（MySQL 任务表 + Redis/RQ）
+pymysql
+redis
+rq
 # 测试
 pytest
